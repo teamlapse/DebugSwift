@@ -216,7 +216,7 @@ extension NetworkViewControllerDetail: UITableViewDelegate, UITableViewDataSourc
     }
 
     func tableView(_: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        section == .zero ? .zero : 44
+        section == .zero ? .zero : UITableView.automaticDimension
     }
 
     func tableView(
