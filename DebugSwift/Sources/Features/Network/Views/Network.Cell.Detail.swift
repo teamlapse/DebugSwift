@@ -8,9 +8,76 @@
 
 import UIKit
 
+// MARK: - SelectableTextView
+
+/// A UITextView subclass that properly handles text selection and contextual menus
+final class SelectableTextView: UITextView {
+    override init(frame: CGRect, textContainer: NSTextContainer?) {
+        super.init(frame: frame, textContainer: textContainer)
+        setupInteraction()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupInteraction()
+    }
+
+    private func setupInteraction() {
+        // Enable text interaction for iOS 17+
+        if #available(iOS 17.0, *) {
+            textContainerInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        }
+
+        // Add long press gesture for showing menu
+        let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPressGesture.minimumPressDuration = 0.5
+        addGestureRecognizer(longPressGesture)
+    }
+
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+
+        becomeFirstResponder()
+
+        // Select all text when long pressing
+        selectedTextRange = textRange(from: beginningOfDocument, to: endOfDocument)
+
+        // Show context menu
+        let menuController = UIMenuController.shared
+        if !menuController.isMenuVisible {
+            menuController.showMenu(from: self, rect: bounds)
+        }
+    }
+
+    override var canBecomeFirstResponder: Bool {
+        return true
+    }
+
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        // Allow copy, select, and select all actions
+        if action == #selector(copy(_:)) ||
+           action == #selector(selectAll(_:)) ||
+           action == #selector(select(_:)) {
+            return true
+        }
+        return false
+    }
+
+    override func copy(_ sender: Any?) {
+        if let selectedRange = selectedTextRange,
+           let selectedText = text(in: selectedRange),
+           !selectedText.isEmpty {
+            UIPasteboard.general.string = selectedText
+        } else {
+            // Copy all text if nothing is selected
+            UIPasteboard.general.string = text
+        }
+    }
+}
+
 final class NetworkTableViewCellDetail: UITableViewCell {
-    let details: UITextView = {
-        let textView = UITextView()
+    let details: SelectableTextView = {
+        let textView = SelectableTextView()
         textView.font = UIFont.systemFont(
             ofSize: 12,
             weight: .medium
@@ -21,6 +88,9 @@ final class NetworkTableViewCellDetail: UITableViewCell {
         textView.backgroundColor = .clear
         textView.isSelectable = true
         textView.isEditable = false
+        textView.dataDetectorTypes = []
+        textView.textContainerInset = .zero
+        textView.textContainer.lineFragmentPadding = 0
 
         return textView
     }()
@@ -86,6 +156,7 @@ final class NetworkTableViewCellDetail: UITableViewCell {
 
         contentView.backgroundColor = UIColor.black
         backgroundColor = UIColor.black
+        selectionStyle = .none
     }
 
     func setupViews() {

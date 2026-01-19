@@ -216,7 +216,7 @@ extension NetworkViewControllerDetail: UITableViewDelegate, UITableViewDataSourc
     }
 
     func tableView(_: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        section == .zero ? .zero : UITableView.automaticDimension
+        section == .zero ? .zero : 44
     }
 
     func tableView(
@@ -225,13 +225,10 @@ extension NetworkViewControllerDetail: UITableViewDelegate, UITableViewDataSourc
         if section == .zero {
             return nil
         }
-        let label = UILabel()
-        label.backgroundColor = UIColor.black
-
-        label.text = "    \(_infos[section - 1].title)"
-        label.textColor = .gray
-        label.font = UIFont.systemFont(ofSize: 12, weight: .bold)
-        return label
+        let header = NetworkSectionHeader()
+        header.configure(title: _infos[section - 1].title, section: section)
+        header.delegate = self
+        return header
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -267,6 +264,50 @@ extension NetworkViewControllerDetail: UISearchResultsUpdating {
                 : infos.filter { $0.description.localizedCaseInsensitiveContains(searchText) }
 
         tableView.reloadData()
+    }
+}
+
+// MARK: - NetworkSectionHeaderDelegate
+extension NetworkViewControllerDetail: NetworkSectionHeaderDelegate {
+    func sectionHeaderDidTapCopy(_ header: NetworkSectionHeader, section: Int) {
+        guard section > 0 else { return }
+        let config = _infos[section - 1]
+        UIPasteboard.general.string = config.description
+
+        // Show brief feedback
+        showCopyFeedback(for: config.title)
+    }
+
+    private func showCopyFeedback(for title: String) {
+        let feedbackLabel = UILabel()
+        feedbackLabel.text = "\(title) copied"
+        feedbackLabel.textColor = .white
+        feedbackLabel.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.9)
+        feedbackLabel.textAlignment = .center
+        feedbackLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        feedbackLabel.layer.cornerRadius = 8
+        feedbackLabel.clipsToBounds = true
+        feedbackLabel.translatesAutoresizingMaskIntoConstraints = false
+
+        view.addSubview(feedbackLabel)
+
+        NSLayoutConstraint.activate([
+            feedbackLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            feedbackLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            feedbackLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 150),
+            feedbackLabel.heightAnchor.constraint(equalToConstant: 36)
+        ])
+
+        feedbackLabel.alpha = 0
+        UIView.animate(withDuration: 0.2, animations: {
+            feedbackLabel.alpha = 1
+        }) { _ in
+            UIView.animate(withDuration: 0.3, delay: 1.0, options: [], animations: {
+                feedbackLabel.alpha = 0
+            }) { _ in
+                feedbackLabel.removeFromSuperview()
+            }
+        }
     }
 }
 
