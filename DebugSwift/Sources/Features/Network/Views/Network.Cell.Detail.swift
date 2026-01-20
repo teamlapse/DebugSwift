@@ -12,6 +12,8 @@ import UIKit
 
 /// A UITextView subclass that properly handles text selection and contextual menus
 final class SelectableTextView: UITextView {
+    private var editMenuInteraction: UIEditMenuInteraction?
+
     override init(frame: CGRect, textContainer: NSTextContainer?) {
         super.init(frame: frame, textContainer: textContainer)
         setupInteraction()
@@ -23,10 +25,10 @@ final class SelectableTextView: UITextView {
     }
 
     private func setupInteraction() {
-        // Enable text interaction for iOS 17+
-        if #available(iOS 17.0, *) {
-            textContainerInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
-        }
+        // Setup edit menu interaction
+        let interaction = UIEditMenuInteraction(delegate: self)
+        addInteraction(interaction)
+        editMenuInteraction = interaction
 
         // Add long press gesture for showing menu
         let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
@@ -42,11 +44,10 @@ final class SelectableTextView: UITextView {
         // Select all text when long pressing
         selectedTextRange = textRange(from: beginningOfDocument, to: endOfDocument)
 
-        // Show context menu
-        let menuController = UIMenuController.shared
-        if !menuController.isMenuVisible {
-            menuController.showMenu(from: self, rect: bounds)
-        }
+        // Show edit menu
+        let location = gesture.location(in: self)
+        let config = UIEditMenuConfiguration(identifier: nil, sourcePoint: location)
+        editMenuInteraction?.presentEditMenu(with: config)
     }
 
     override var canBecomeFirstResponder: Bool {
@@ -72,6 +73,24 @@ final class SelectableTextView: UITextView {
             // Copy all text if nothing is selected
             UIPasteboard.general.string = text
         }
+    }
+}
+
+// MARK: - UIEditMenuInteractionDelegate
+
+extension SelectableTextView: UIEditMenuInteractionDelegate {
+    func editMenuInteraction(
+        _ interaction: UIEditMenuInteraction,
+        menuFor configuration: UIEditMenuConfiguration,
+        suggestedActions: [UIMenuElement]
+    ) -> UIMenu? {
+        let copyAction = UIAction(title: "Copy", image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
+            self?.copy(nil)
+        }
+        let selectAllAction = UIAction(title: "Select All", image: UIImage(systemName: "selection.pin.in.out")) { [weak self] _ in
+            self?.selectAll(nil)
+        }
+        return UIMenu(children: [copyAction, selectAllAction])
     }
 }
 

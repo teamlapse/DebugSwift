@@ -7,6 +7,7 @@
 
 import UIKit
 
+@MainActor
 protocol NetworkSectionHeaderDelegate: AnyObject {
     func sectionHeaderDidTapCopy(_ header: NetworkSectionHeader, section: Int)
 }
@@ -24,12 +25,13 @@ final class NetworkSectionHeader: UIView {
     }()
 
     private lazy var copyButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "doc.on.doc"), for: .normal)
+        var config = UIButton.Configuration.plain()
+        config.image = UIImage(systemName: "doc.on.doc")
+        config.contentInsets = NSDirectionalEdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8)
+        let button = UIButton(configuration: config)
         button.tintColor = .gray
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(copyTapped), for: .touchUpInside)
-        button.contentEdgeInsets = UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
         return button
     }()
 
