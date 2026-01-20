@@ -78,6 +78,7 @@ final class SelectableTextView: UITextView {
 
 // MARK: - UIEditMenuInteractionDelegate
 
+@MainActor
 extension SelectableTextView: UIEditMenuInteractionDelegate {
     func editMenuInteraction(
         _ interaction: UIEditMenuInteraction,
