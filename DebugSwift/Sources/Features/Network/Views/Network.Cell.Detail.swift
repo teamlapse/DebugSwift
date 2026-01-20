@@ -8,9 +8,96 @@
 
 import UIKit
 
+// MARK: - SelectableTextView
+
+/// A UITextView subclass that properly handles text selection and contextual menus
+final class SelectableTextView: UITextView {
+    private var editMenuInteraction: UIEditMenuInteraction?
+
+    override init(frame: CGRect, textContainer: NSTextContainer?) {
+        super.init(frame: frame, textContainer: textContainer)
+        setupInteraction()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setupInteraction()
+    }
+
+    private func setupInteraction() {
+        // Setup edit menu interaction
+        let interaction = UIEditMenuInteraction(delegate: self)
+        addInteraction(interaction)
+        editMenuInteraction = interaction
+
+        // Add long press gesture for showing menu
+        let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPressGesture.minimumPressDuration = 0.5
+        addGestureRecognizer(longPressGesture)
+    }
+
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+
+        becomeFirstResponder()
+
+        // Select all text when long pressing
+        selectedTextRange = textRange(from: beginningOfDocument, to: endOfDocument)
+
+        // Show edit menu
+        let location = gesture.location(in: self)
+        let config = UIEditMenuConfiguration(identifier: nil, sourcePoint: location)
+        editMenuInteraction?.presentEditMenu(with: config)
+    }
+
+    override var canBecomeFirstResponder: Bool {
+        return true
+    }
+
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        // Allow copy, select, and select all actions
+        if action == #selector(copy(_:)) ||
+           action == #selector(selectAll(_:)) ||
+           action == #selector(select(_:)) {
+            return true
+        }
+        return false
+    }
+
+    override func copy(_ sender: Any?) {
+        if let selectedRange = selectedTextRange,
+           let selectedText = text(in: selectedRange),
+           !selectedText.isEmpty {
+            UIPasteboard.general.string = selectedText
+        } else {
+            // Copy all text if nothing is selected
+            UIPasteboard.general.string = text
+        }
+    }
+}
+
+// MARK: - UIEditMenuInteractionDelegate
+
+@MainActor @preconcurrency
+extension SelectableTextView: UIEditMenuInteractionDelegate {
+    func editMenuInteraction(
+        _ interaction: UIEditMenuInteraction,
+        menuFor configuration: UIEditMenuConfiguration,
+        suggestedActions: [UIMenuElement]
+    ) -> UIMenu? {
+        let copyAction = UIAction(title: "Copy", image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
+            self?.copy(nil)
+        }
+        let selectAllAction = UIAction(title: "Select All", image: UIImage(systemName: "selection.pin.in.out")) { [weak self] _ in
+            self?.selectAll(nil)
+        }
+        return UIMenu(children: [copyAction, selectAllAction])
+    }
+}
+
 final class NetworkTableViewCellDetail: UITableViewCell {
-    let details: UITextView = {
-        let textView = UITextView()
+    let details: SelectableTextView = {
+        let textView = SelectableTextView()
         textView.font = UIFont.systemFont(
             ofSize: 12,
             weight: .medium
@@ -21,6 +108,9 @@ final class NetworkTableViewCellDetail: UITableViewCell {
         textView.backgroundColor = .clear
         textView.isSelectable = true
         textView.isEditable = false
+        textView.dataDetectorTypes = []
+        textView.textContainerInset = .zero
+        textView.textContainer.lineFragmentPadding = 0
 
         return textView
     }()
@@ -86,6 +176,7 @@ final class NetworkTableViewCellDetail: UITableViewCell {
 
         contentView.backgroundColor = UIColor.black
         backgroundColor = UIColor.black
+        selectionStyle = .none
     }
 
     func setupViews() {
