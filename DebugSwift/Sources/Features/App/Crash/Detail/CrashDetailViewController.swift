@@ -199,21 +199,21 @@ extension CrashDetailViewController: UITableViewDataSource, UITableViewDelegate 
             }
             actions.append(copyTitleAction)
             
-            if let detail = data.detail, !detail.isEmpty {
+            if !data.detail.isEmpty {
                 let copyDetailAction = UIAction(
                     title: "Copy Value",
                     image: UIImage(systemName: "doc.on.doc.fill")
                 ) { [weak self] _ in
-                    UIPasteboard.general.string = detail
+                    UIPasteboard.general.string = data.detail
                     self?.showCopyFeedback(for: "Value")
                 }
                 actions.append(copyDetailAction)
-                
+
                 let copyBothAction = UIAction(
                     title: "Copy Both",
                     image: UIImage(systemName: "rectangle.on.rectangle")
                 ) { [weak self] _ in
-                    let combined = "\(data.title): \(detail)"
+                    let combined = "\(data.title): \(data.detail)"
                     UIPasteboard.general.string = combined
                     self?.showCopyFeedback(for: "\(data.title) with value")
                 }

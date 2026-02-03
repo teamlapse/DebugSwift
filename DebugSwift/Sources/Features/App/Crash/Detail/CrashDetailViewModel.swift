@@ -120,8 +120,8 @@ final class CrashDetailViewModel: NSObject {
         var result = "Stack Trace:\n"
         for (index, trace) in data.traces.enumerated() {
             result += "\(index): \(trace.info.title)"
-            if let detail = trace.info.detail, !detail.isEmpty {
-                result += " - \(detail)"
+            if !trace.info.detail.isEmpty {
+                result += " - \(trace.info.detail)"
             }
             result += "\n"
         }
