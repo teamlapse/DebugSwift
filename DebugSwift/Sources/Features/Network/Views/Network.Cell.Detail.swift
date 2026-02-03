@@ -30,9 +30,23 @@ final class NetworkTableViewCellDetail: UITableViewCell {
         details.becomeFirstResponder()
         details.selectAll(nil)
     }
-    
+
     func getText() -> String {
         return details.text ?? ""
+    }
+
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        if action == #selector(copy(_:)) || action == #selector(selectAll(_:)) {
+            return details.isFirstResponder
+        }
+        return super.canPerformAction(action, withSender: sender)
+    }
+
+    override func copy(_ sender: Any?) {
+        if let selectedRange = details.selectedTextRange,
+           let selectedText = details.text(in: selectedRange) {
+            UIPasteboard.general.string = selectedText
+        }
     }
 
     override init(
