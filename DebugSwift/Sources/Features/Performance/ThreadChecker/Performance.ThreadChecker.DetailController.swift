@@ -175,6 +175,7 @@ final class ThreadViolationDetailViewController: BaseController {
         stackTraceTextView.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         stackTraceTextView.text = violation.stackTrace.joined(separator: "\n")
         stackTraceTextView.isEditable = false
+        stackTraceTextView.isSelectable = true
         stackTraceTextView.layer.cornerRadius = 8
         stackTraceTextView.contentInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
         

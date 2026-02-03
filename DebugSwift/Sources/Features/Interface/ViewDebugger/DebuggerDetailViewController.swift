@@ -8,6 +8,8 @@
 import UIKit
 
 final class DebuggerDetailViewController: UIViewController {
+    private var snapshotDescription: String = ""
+    
     let imageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
@@ -18,6 +20,7 @@ final class DebuggerDetailViewController: UIViewController {
     let textView: UITextView = {
         let textView = UITextView()
         textView.isEditable = false
+        textView.isSelectable = true
         textView.isScrollEnabled = true
         textView.translatesAutoresizingMaskIntoConstraints = false
         return textView
@@ -26,7 +29,8 @@ final class DebuggerDetailViewController: UIViewController {
     init(snapshot: Snapshot) {
         super.init(nibName: nil, bundle: nil)
         title = snapshot.element.title
-        textView.text = snapshot.element.description
+        snapshotDescription = snapshot.element.description
+        textView.text = snapshotDescription
         if let cgImage = snapshot.snapshotImage {
             imageView.image = .init(cgImage: cgImage).outline()
         }
@@ -42,8 +46,9 @@ final class DebuggerDetailViewController: UIViewController {
         view.backgroundColor = UIColor.black
         textView.backgroundColor = UIColor.black
         textView.textColor = UIColor.white
+        
+        setupNavigationButtons()
 
-        // Adiciona a UIImageView
         view.addSubview(imageView)
 
         NSLayoutConstraint.activate([
@@ -74,5 +79,47 @@ final class DebuggerDetailViewController: UIViewController {
             textView.topAnchor.constraint(equalTo: imageView.bottomAnchor),
             textView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+    }
+    
+    private func setupNavigationButtons() {
+        navigationItem.rightBarButtonItems = [
+            UIBarButtonItem(
+                image: UIImage(systemName: "square.and.arrow.up"),
+                style: .plain,
+                target: self,
+                action: #selector(shareButtonTapped)
+            ),
+            UIBarButtonItem(
+                image: UIImage(systemName: "doc.on.doc"),
+                style: .plain,
+                target: self,
+                action: #selector(copyButtonTapped)
+            )
+        ]
+    }
+    
+    @objc private func copyButtonTapped() {
+        UIPasteboard.general.string = snapshotDescription
+        let alert = UIAlertController(
+            title: "Copied!",
+            message: "View details copied to clipboard",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
+    
+    @objc private func shareButtonTapped() {
+        let activityVC = UIActivityViewController(
+            activityItems: [snapshotDescription],
+            applicationActivities: nil
+        )
+        
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+        }
+        
+        present(activityVC, animated: true)
     }
 }

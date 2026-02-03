@@ -289,6 +289,111 @@ extension SQLQueryViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
     }
+    
+    func tableView(
+        _ tableView: UITableView,
+        contextMenuConfigurationForRowAt indexPath: IndexPath,
+        point: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            guard let self = self else { return nil }
+            
+            var actions: [UIAction] = []
+            
+            if indexPath.row == 0 {
+                let copyHeadersAction = UIAction(
+                    title: "Copy Column Names",
+                    image: UIImage(systemName: "doc.on.doc")
+                ) { [weak self] _ in
+                    guard let self = self else { return }
+                    let text = self.resultColumns.joined(separator: ", ")
+                    UIPasteboard.general.string = text
+                    self.showCopyFeedback("Column names")
+                }
+                actions.append(copyHeadersAction)
+            } else {
+                let row = self.resultRows[indexPath.row - 1]
+                let values = row.map { value -> String in
+                    if let value = value {
+                        if let data = value as? Data {
+                            if let jsonString = data.toJSONString() {
+                                return jsonString
+                            } else {
+                                return "<BLOB \(data.count)b>"
+                            }
+                        }
+                        return "\(value)"
+                    }
+                    return "NULL"
+                }
+                
+                let copyRowAction = UIAction(
+                    title: "Copy Row",
+                    image: UIImage(systemName: "doc.on.doc")
+                ) { [weak self] _ in
+                    let text = values.joined(separator: ", ")
+                    UIPasteboard.general.string = text
+                    self?.showCopyFeedback("Row")
+                }
+                actions.append(copyRowAction)
+                
+                let copyRowWithColumnsAction = UIAction(
+                    title: "Copy Row with Column Names",
+                    image: UIImage(systemName: "doc.on.doc.fill")
+                ) { [weak self] _ in
+                    guard let self = self else { return }
+                    var text = ""
+                    for (index, column) in self.resultColumns.enumerated() {
+                        if index < values.count {
+                            text += "\(column): \(values[index])\n"
+                        }
+                    }
+                    UIPasteboard.general.string = text
+                    self.showCopyFeedback("Row with column names")
+                }
+                actions.append(copyRowWithColumnsAction)
+            }
+            
+            let copyAllResultsAction = UIAction(
+                title: "Copy All Results",
+                image: UIImage(systemName: "list.bullet.rectangle")
+            ) { [weak self] _ in
+                guard let self = self else { return }
+                var text = self.resultColumns.joined(separator: "\t") + "\n"
+                for row in self.resultRows {
+                    let values = row.map { value -> String in
+                        if let value = value {
+                            if let data = value as? Data {
+                                if let jsonString = data.toJSONString() {
+                                    return jsonString
+                                } else {
+                                    return "<BLOB \(data.count)b>"
+                                }
+                            }
+                            return "\(value)"
+                        }
+                        return "NULL"
+                    }
+                    text += values.joined(separator: "\t") + "\n"
+                }
+                UIPasteboard.general.string = text
+                self.showCopyFeedback("All results")
+            }
+            actions.append(copyAllResultsAction)
+            
+            return UIMenu(title: "Copy", children: actions)
+        }
+    }
+    
+    private func showCopyFeedback(_ item: String) {
+        let alert = UIAlertController(
+            title: "Copied!",
+            message: "\(item) copied to clipboard",
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
+    }
 }
 
 // MARK: - Query History View Controller
