@@ -96,13 +96,30 @@ final class ResourcesGenericController: BaseTableController {
         
         let actionSheet = UIAlertController(title: dataSource.title, message: nil, preferredStyle: .actionSheet)
         
+        actionSheet.addAction(UIAlertAction(title: "Copy Key", style: .default) { [weak self] _ in
+            UIPasteboard.general.string = dataSource.title
+            self?.showAlert(with: "Key copied to clipboard", title: "Copied!")
+        })
+        
+        if !dataSource.value.isEmpty {
+            actionSheet.addAction(UIAlertAction(title: "Copy Value", style: .default) { [weak self] _ in
+                UIPasteboard.general.string = dataSource.value
+                self?.showAlert(with: "Value copied to clipboard", title: "Copied!")
+            })
+            
+            actionSheet.addAction(UIAlertAction(title: "Copy Key & Value", style: .default) { [weak self] _ in
+                let combined = "\(dataSource.title): \(dataSource.value)"
+                UIPasteboard.general.string = combined
+                self?.showAlert(with: "Key and value copied to clipboard", title: "Copied!")
+            })
+        }
+        
         if viewModel.isEditEnable {
             actionSheet.addAction(UIAlertAction(title: "Edit", style: .default) { [weak self] _ in
                 self?.handleEditAction(at: indexPath.row)
             })
         }
         
-        // Duplicate action
         actionSheet.addAction(UIAlertAction(title: "Duplicate", style: .default) { [weak self] _ in
             self?.handleDuplicateAction(at: indexPath.row)
         })
@@ -460,6 +477,107 @@ final class ResourcesGenericController: BaseTableController {
             selectedIndexPaths.remove(indexPath)
             updateNavigationButtons()
         }
+    }
+    
+    override func tableView(
+        _ tableView: UITableView,
+        contextMenuConfigurationForRowAt indexPath: IndexPath,
+        point: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard !isInEditMode else { return nil }
+        
+        let dataSource = viewModel.dataSourceForItem(atIndex: indexPath.row)
+        
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            var actions: [UIAction] = []
+            
+            let copyKeyAction = UIAction(
+                title: "Copy Key",
+                image: UIImage(systemName: "doc.on.doc")
+            ) { [weak self] _ in
+                UIPasteboard.general.string = dataSource.title
+                self?.showAlert(with: "Key copied to clipboard", title: "Copied!")
+            }
+            actions.append(copyKeyAction)
+            
+            if !dataSource.value.isEmpty {
+                let copyValueAction = UIAction(
+                    title: "Copy Value",
+                    image: UIImage(systemName: "doc.on.doc.fill")
+                ) { [weak self] _ in
+                    UIPasteboard.general.string = dataSource.value
+                    self?.showAlert(with: "Value copied to clipboard", title: "Copied!")
+                }
+                actions.append(copyValueAction)
+                
+                let copyBothAction = UIAction(
+                    title: "Copy Key & Value",
+                    image: UIImage(systemName: "rectangle.on.rectangle")
+                ) { [weak self] _ in
+                    let combined = "\(dataSource.title): \(dataSource.value)"
+                    UIPasteboard.general.string = combined
+                    self?.showAlert(with: "Key and value copied to clipboard", title: "Copied!")
+                }
+                actions.append(copyBothAction)
+            }
+            
+            let copyMenu = UIMenu(title: "Copy", image: UIImage(systemName: "doc.on.doc"), children: actions)
+            
+            var menuItems: [UIMenuElement] = [copyMenu]
+            
+            if let self = self {
+                if self.viewModel.isEditEnable {
+                    let editAction = UIAction(
+                        title: "Edit",
+                        image: UIImage(systemName: "pencil")
+                    ) { [weak self] _ in
+                        self?.handleEditAction(at: indexPath.row)
+                    }
+                    menuItems.append(editAction)
+                }
+                
+                let duplicateAction = UIAction(
+                    title: "Duplicate",
+                    image: UIImage(systemName: "plus.square.on.square")
+                ) { [weak self] _ in
+                    self?.handleDuplicateAction(at: indexPath.row)
+                }
+                menuItems.append(duplicateAction)
+                
+                if self.viewModel.isDeleteEnable {
+                    let deleteAction = UIAction(
+                        title: "Delete",
+                        image: UIImage(systemName: "trash"),
+                        attributes: .destructive
+                    ) { [weak self] _ in
+                        self?.showDeleteConfirmation(for: indexPath)
+                    }
+                    menuItems.append(deleteAction)
+                }
+            }
+            
+            return UIMenu(title: dataSource.title, children: menuItems)
+        }
+    }
+    
+    override func tableView(
+        _ tableView: UITableView,
+        leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        guard !isInEditMode else { return nil }
+        
+        let dataSource = viewModel.dataSourceForItem(atIndex: indexPath.row)
+        
+        let copyAction = UIContextualAction(style: .normal, title: nil) { [weak self] _, _, completion in
+            let textToCopy = dataSource.value.isEmpty ? dataSource.title : "\(dataSource.title): \(dataSource.value)"
+            UIPasteboard.general.string = textToCopy
+            self?.showAlert(with: "Copied to clipboard", title: "Copied!")
+            completion(true)
+        }
+        copyAction.image = UIImage(systemName: "doc.on.doc")
+        copyAction.backgroundColor = .systemBlue
+        
+        return UISwipeActionsConfiguration(actions: [copyAction])
     }
 
     // MARK: - Actions

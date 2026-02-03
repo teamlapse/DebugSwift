@@ -115,4 +115,16 @@ final class CrashDetailViewModel: NSObject {
 
         return result
     }
+    
+    func getStackTraceText() -> String {
+        var result = "Stack Trace:\n"
+        for (index, trace) in data.traces.enumerated() {
+            result += "\(index): \(trace.info.title)"
+            if let detail = trace.info.detail, !detail.isEmpty {
+                result += " - \(detail)"
+            }
+            result += "\n"
+        }
+        return result
+    }
 }

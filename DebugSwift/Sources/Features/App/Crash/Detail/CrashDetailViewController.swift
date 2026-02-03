@@ -176,6 +176,93 @@ extension CrashDetailViewController: UITableViewDataSource, UITableViewDelegate 
             navigationController?.pushViewController(controller, animated: true)
         }
     }
+    
+    func tableView(
+        _ tableView: UITableView,
+        contextMenuConfigurationForRowAt indexPath: IndexPath,
+        point: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        guard let feature = Features(rawValue: indexPath.section),
+              let data = viewModel.dataSourceForItem(indexPath) else {
+            return nil
+        }
+        
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            var actions: [UIAction] = []
+            
+            let copyTitleAction = UIAction(
+                title: "Copy \(data.title)",
+                image: UIImage(systemName: "doc.on.doc")
+            ) { [weak self] _ in
+                UIPasteboard.general.string = data.title
+                self?.showCopyFeedback(for: data.title)
+            }
+            actions.append(copyTitleAction)
+            
+            if let detail = data.detail, !detail.isEmpty {
+                let copyDetailAction = UIAction(
+                    title: "Copy Value",
+                    image: UIImage(systemName: "doc.on.doc.fill")
+                ) { [weak self] _ in
+                    UIPasteboard.general.string = detail
+                    self?.showCopyFeedback(for: "Value")
+                }
+                actions.append(copyDetailAction)
+                
+                let copyBothAction = UIAction(
+                    title: "Copy Both",
+                    image: UIImage(systemName: "rectangle.on.rectangle")
+                ) { [weak self] _ in
+                    let combined = "\(data.title): \(detail)"
+                    UIPasteboard.general.string = combined
+                    self?.showCopyFeedback(for: "\(data.title) with value")
+                }
+                actions.append(copyBothAction)
+            }
+            
+            if feature == .stackTrace {
+                let copyAllStackTraceAction = UIAction(
+                    title: "Copy Entire Stack Trace",
+                    image: UIImage(systemName: "list.bullet.rectangle")
+                ) { [weak self] _ in
+                    guard let self = self else { return }
+                    let stackTrace = self.viewModel.getStackTraceText()
+                    UIPasteboard.general.string = stackTrace
+                    self.showCopyFeedback(for: "Stack Trace")
+                }
+                actions.append(copyAllStackTraceAction)
+            }
+            
+            return UIMenu(title: feature.title, children: actions)
+        }
+    }
+    
+    func tableView(
+        _ tableView: UITableView,
+        leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        guard let data = viewModel.dataSourceForItem(indexPath) else {
+            return nil
+        }
+        
+        let copyAction = UIContextualAction(style: .normal, title: nil) { [weak self] _, _, completion in
+            let textToCopy = data.detail ?? data.title
+            UIPasteboard.general.string = textToCopy
+            self?.showCopyFeedback(for: data.title)
+            completion(true)
+        }
+        copyAction.image = UIImage(systemName: "doc.on.doc")
+        copyAction.backgroundColor = .systemBlue
+        
+        return UISwipeActionsConfiguration(actions: [copyAction])
+    }
+    
+    private func showCopyFeedback(for item: String) {
+        showAlert(
+            with: "\(item) copied to clipboard",
+            title: "Copied!"
+        )
+    }
 }
 
 extension CrashDetailViewController {
