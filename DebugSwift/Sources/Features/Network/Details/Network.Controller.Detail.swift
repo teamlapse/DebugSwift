@@ -100,10 +100,8 @@ final class NetworkViewControllerDetail: BaseController {
         searchController.automaticallyShowsSearchResultsController = false
         searchController.obscuresBackgroundDuringPresentation = false
         
-        // Force search bar placement if available
-        if #available(iOS 16.0, *) {
-            navigationItem.preferredSearchBarPlacement = .stacked
-        }
+        // Force search bar placement (iOS 16+ API always available since function is @available(iOS 18.0, *))
+        navigationItem.preferredSearchBarPlacement = .stacked
         
         // Force immediate setup
         DispatchQueue.main.async { [weak self] in
