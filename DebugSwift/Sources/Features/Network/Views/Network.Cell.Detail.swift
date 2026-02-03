@@ -21,9 +21,19 @@ final class NetworkTableViewCellDetail: UITableViewCell {
         textView.backgroundColor = .clear
         textView.isSelectable = true
         textView.isEditable = false
+        textView.dataDetectorTypes = [.link]
 
         return textView
     }()
+    
+    func selectAllText() {
+        details.becomeFirstResponder()
+        details.selectAll(nil)
+    }
+    
+    func getText() -> String {
+        return details.text ?? ""
+    }
 
     override init(
         style: UITableViewCell.CellStyle,

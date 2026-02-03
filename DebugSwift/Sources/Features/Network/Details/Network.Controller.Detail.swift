@@ -255,6 +255,119 @@ extension NetworkViewControllerDetail: UITableViewDelegate, UITableViewDataSourc
 
         return cell
     }
+
+    func tableView(
+        _ tableView: UITableView,
+        contextMenuConfigurationForRowAt indexPath: IndexPath,
+        point: CGPoint
+    ) -> UIContextMenuConfiguration? {
+        if indexPath.section == 0 {
+            return createOverviewContextMenu()
+        }
+        
+        let config = _infos[indexPath.section - 1]
+        
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
+            let copyAction = UIAction(
+                title: "Copy",
+                image: UIImage(systemName: "doc.on.doc")
+            ) { [weak self] _ in
+                UIPasteboard.general.string = config.description
+                self?.showCopyFeedback(for: config.title)
+            }
+            
+            let copyWithTitleAction = UIAction(
+                title: "Copy with Title",
+                image: UIImage(systemName: "doc.on.doc.fill")
+            ) { [weak self] _ in
+                let text = "--- \(config.title) ---\n\(config.description)"
+                UIPasteboard.general.string = text
+                self?.showCopyFeedback(for: config.title)
+            }
+            
+            let selectAllAction = UIAction(
+                title: "Select All Text",
+                image: UIImage(systemName: "selection.pin.in.out")
+            ) { [weak self] _ in
+                if let cell = tableView.cellForRow(at: indexPath) as? NetworkTableViewCellDetail {
+                    cell.selectAllText()
+                }
+            }
+            
+            return UIMenu(title: config.title, children: [copyAction, copyWithTitleAction, selectAllAction])
+        }
+    }
+    
+    private func createOverviewContextMenu() -> UIContextMenuConfiguration {
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            guard let self = self else { return nil }
+            
+            let copyURLAction = UIAction(
+                title: "Copy URL",
+                image: UIImage(systemName: "link")
+            ) { [weak self] _ in
+                guard let self = self else { return }
+                UIPasteboard.general.string = self.model.url?.absoluteString ?? ""
+                self.showCopyFeedback(for: "URL")
+            }
+            
+            let copyMethodAction = UIAction(
+                title: "Copy Method",
+                image: UIImage(systemName: "text.badge.checkmark")
+            ) { [weak self] _ in
+                guard let self = self else { return }
+                UIPasteboard.general.string = self.model.method ?? ""
+                self.showCopyFeedback(for: "Method")
+            }
+            
+            let copyStatusAction = UIAction(
+                title: "Copy Status Code",
+                image: UIImage(systemName: "number")
+            ) { [weak self] _ in
+                guard let self = self else { return }
+                UIPasteboard.general.string = self.model.statusCode ?? ""
+                self.showCopyFeedback(for: "Status Code")
+            }
+            
+            let copySummaryAction = UIAction(
+                title: "Copy Summary",
+                image: UIImage(systemName: "doc.on.doc.fill")
+            ) { [weak self] _ in
+                guard let self = self else { return }
+                let summary = "[\(self.model.method ?? "")] \(self.model.url?.absoluteString ?? "") - Status: \(self.model.statusCode ?? "")"
+                UIPasteboard.general.string = summary
+                self.showCopyFeedback(for: "Summary")
+            }
+            
+            return UIMenu(title: "Request Overview", children: [copyURLAction, copyMethodAction, copyStatusAction, copySummaryAction])
+        }
+    }
+    
+    func tableView(
+        _ tableView: UITableView,
+        leadingSwipeActionsConfigurationForRowAt indexPath: IndexPath
+    ) -> UISwipeActionsConfiguration? {
+        guard indexPath.section > 0 else { return nil }
+        
+        let config = _infos[indexPath.section - 1]
+        
+        let copyAction = UIContextualAction(style: .normal, title: nil) { [weak self] _, _, completion in
+            UIPasteboard.general.string = config.description
+            self?.showCopyFeedback(for: config.title)
+            completion(true)
+        }
+        copyAction.image = UIImage(systemName: "doc.on.doc")
+        copyAction.backgroundColor = .systemBlue
+        
+        return UISwipeActionsConfiguration(actions: [copyAction])
+    }
+    
+    private func showCopyFeedback(for sectionTitle: String) {
+        showAlert(
+            with: "\(sectionTitle) copied to clipboard",
+            title: "Copied!"
+        )
+    }
 }
 
 extension NetworkViewControllerDetail: UISearchResultsUpdating {
