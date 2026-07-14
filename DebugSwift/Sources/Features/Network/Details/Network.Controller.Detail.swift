@@ -88,86 +88,85 @@ final class NetworkViewControllerDetail: BaseController {
         }
         definesPresentationContext = true
     }
-    
+
     @available(iOS 18.0, *)
     private func setupSearchBarForModernIOS() {
         // Enhanced setup for modern iOS versions (18+) including iOS 26
         navigationItem.searchController = searchController
         navigationItem.hidesSearchBarWhenScrolling = false
-        
+
         // Configure search controller for better compatibility
         searchController.hidesNavigationBarDuringPresentation = false
         searchController.automaticallyShowsSearchResultsController = false
         searchController.obscuresBackgroundDuringPresentation = false
-        
+
         // Force search bar placement if available
         if #available(iOS 16.0, *) {
             navigationItem.preferredSearchBarPlacement = .stacked
         }
-        
+
         // Force immediate setup
         DispatchQueue.main.async { [weak self] in
             self?.forceSearchBarVisibilityDetail()
         }
     }
-    
+
     private func setupSearchBarLegacy() {
         // Standard setup for iOS versions before 18
         navigationItem.searchController = searchController
         navigationItem.hidesSearchBarWhenScrolling = false
         searchController.hidesNavigationBarDuringPresentation = false
     }
-    
+
     private func forceSearchBarVisibilityDetail() {
         // Force layout and ensure search bar is functional
-        guard let navigationController = navigationController else { return }
-        
+        guard let navigationController else { return }
+
         navigationController.navigationBar.setNeedsLayout()
         navigationController.navigationBar.layoutIfNeeded()
-        
+
         // Verify search controller is properly set up
         if let searchController = navigationItem.searchController {
             searchController.searchBar.isUserInteractionEnabled = true
             searchController.searchBar.alpha = 1.0
-            
         }
     }
-    
+
     private func addSearchBarFallbackDetail() {
         // Fallback method for iOS 26 if standard setup fails
         guard let navigationBar = navigationController?.navigationBar else { return }
-        
+
         // Remove search controller and add search bar directly
         navigationItem.searchController = nil
-        
+
         // Create a container view for the search bar
         let searchBarContainer = UIView()
         searchBarContainer.translatesAutoresizingMaskIntoConstraints = false
-        
+
         // Configure search bar for direct embedding
         let searchBar = searchController.searchBar
         searchBar.translatesAutoresizingMaskIntoConstraints = false
         searchBar.delegate = self
-        
+
         searchBarContainer.addSubview(searchBar)
         navigationBar.addSubview(searchBarContainer)
-        
+
         NSLayoutConstraint.activate([
             searchBarContainer.topAnchor.constraint(equalTo: navigationBar.bottomAnchor),
             searchBarContainer.leadingAnchor.constraint(equalTo: navigationBar.leadingAnchor),
             searchBarContainer.trailingAnchor.constraint(equalTo: navigationBar.trailingAnchor),
             searchBarContainer.heightAnchor.constraint(equalToConstant: 44),
-            
+
             searchBar.topAnchor.constraint(equalTo: searchBarContainer.topAnchor),
             searchBar.leadingAnchor.constraint(equalTo: searchBarContainer.leadingAnchor, constant: 8),
             searchBar.trailingAnchor.constraint(equalTo: searchBarContainer.trailingAnchor, constant: -8),
             searchBar.bottomAnchor.constraint(equalTo: searchBarContainer.bottomAnchor)
         ])
-        
+
         // Update tableView constraints to account for the search bar
         updateTableViewConstraintsForFallbackSearchBarDetail()
     }
-    
+
     private func updateTableViewConstraintsForFallbackSearchBarDetail() {
         // Adjust tableView top constraint when using fallback search bar
         tableView.translatesAutoresizingMaskIntoConstraints = false
@@ -225,13 +224,41 @@ extension NetworkViewControllerDetail: UITableViewDelegate, UITableViewDataSourc
         if section == .zero {
             return nil
         }
-        let label = UILabel()
-        label.backgroundColor = UIColor.black
 
-        label.text = "    \(_infos[section - 1].title)"
+        let config = _infos[section - 1]
+        let header = UIView()
+        header.backgroundColor = UIColor.black
+
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.text = config.title
         label.textColor = .gray
         label.font = UIFont.systemFont(ofSize: 12, weight: .bold)
-        return label
+
+        let copyButton = UIButton(type: .system)
+        copyButton.translatesAutoresizingMaskIntoConstraints = false
+        copyButton.setImage(UIImage(systemName: "doc.on.doc"), for: .normal)
+        copyButton.tintColor = .gray
+        copyButton.tag = section - 1
+        copyButton.isEnabled = config.isCopyable
+        copyButton.accessibilityLabel = "Copy \(config.title)"
+        copyButton.addTarget(self, action: #selector(copySectionButtonTapped(_:)), for: .touchUpInside)
+
+        header.addSubview(label)
+        header.addSubview(copyButton)
+
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: header.leadingAnchor, constant: 16),
+            label.centerYAnchor.constraint(equalTo: header.centerYAnchor),
+            label.trailingAnchor.constraint(lessThanOrEqualTo: copyButton.leadingAnchor, constant: -8),
+            copyButton.topAnchor.constraint(equalTo: header.topAnchor, constant: 4),
+            copyButton.trailingAnchor.constraint(equalTo: header.trailingAnchor, constant: -16),
+            copyButton.bottomAnchor.constraint(equalTo: header.bottomAnchor, constant: -4),
+            copyButton.widthAnchor.constraint(equalToConstant: 32),
+            copyButton.heightAnchor.constraint(equalToConstant: 32)
+        ])
+
+        return header
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -271,6 +298,7 @@ extension NetworkViewControllerDetail: UISearchResultsUpdating {
 }
 
 // MARK: - UISearchBarDelegate for iOS 26 fallback support
+
 extension NetworkViewControllerDetail: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         // Handle search text changes for fallback search bar
@@ -278,18 +306,18 @@ extension NetworkViewControllerDetail: UISearchBarDelegate {
             searchText.isEmpty
                 ? infos
                 : infos.filter { $0.description.localizedCaseInsensitiveContains(searchText) }
-        
+
         tableView.reloadData()
     }
-    
+
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
     }
-    
+
     func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
         searchBar.text = ""
         searchBar.resignFirstResponder()
-        
+
         // Clear search results
         filteredInfos = infos
         tableView.reloadData()
@@ -302,6 +330,10 @@ extension NetworkViewControllerDetail {
     struct Config {
         let title: String
         let description: String
+
+        var isCopyable: Bool {
+            !description.isEmpty && description != "No data"
+        }
     }
 }
 
@@ -333,9 +365,9 @@ extension [NetworkViewControllerDetail.Config] {
                 description: model.responseData?.formattedString() ?? "No data"
             )
         ]
-        
+
         // Add decrypted response if available
-        if model.isEncrypted && model.decryptedResponseData != nil {
+        if model.isEncrypted, model.decryptedResponseData != nil {
             configs.append(NetworkViewControllerDetail.Config(
                 title: "RESPONSE (DECRYPTED)",
                 description: model.decryptedResponseData?.formattedString() ?? "No data"
@@ -350,7 +382,7 @@ extension [NetworkViewControllerDetail.Config] {
                 description: "🔒 Response is encrypted (no decryption key available)"
             ))
         }
-        
+
         configs.append(contentsOf: [
             NetworkViewControllerDetail.Config(
                 title: "RESPONSE SIZE",
@@ -361,12 +393,21 @@ extension [NetworkViewControllerDetail.Config] {
                 description: model.mineType ?? "No data"
             )
         ])
-        
+
         self = configs
     }
 }
 
 extension NetworkViewControllerDetail {
+    @objc private func copySectionButtonTapped(_ sender: UIButton) {
+        copySection(atDisplayedIndex: sender.tag)
+    }
+
+    func copySection(atDisplayedIndex index: Int) {
+        guard _infos.indices.contains(index), _infos[index].isCopyable else { return }
+        UIPasteboard.general.string = _infos[index].description
+    }
+
     @objc private func copyButtonTapped() {
         UIPasteboard.general.string = formatLog(model: model)
     }
@@ -389,41 +430,41 @@ extension NetworkViewControllerDetail {
         """
         UIPasteboard.general.string = curlCommand
     }
-    
+
     @objc private func replayButtonTapped() {
         showReplayConfirmation()
     }
-    
+
     private func showReplayConfirmation() {
         let alert = UIAlertController(
             title: "Replay Request",
             message: "Do you want to resend this HTTP request?\n\n\(model.method ?? "GET") \(model.url?.absoluteString ?? "")",
             preferredStyle: .alert
         )
-        
+
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Replay", style: .default) { [weak self] _ in
             self?.performRequestReplay()
         })
-        
+
         present(alert, animated: true)
     }
-    
+
     private func performRequestReplay() {
         guard let url = model.url,
               let method = model.method else {
             showErrorAlert("Invalid request data")
             return
         }
-        
+
         // Show loading indicator
         let loadingAlert = UIAlertController(title: "Sending Request...", message: nil, preferredStyle: .alert)
         present(loadingAlert, animated: true)
-        
+
         // Create request with same parameters
         var request = URLRequest(url: url)
         request.httpMethod = method
-        
+
         // Add headers
         if let headers = model.requestHeaderFields {
             for (key, value) in headers {
@@ -432,10 +473,10 @@ extension NetworkViewControllerDetail {
                 }
             }
         }
-        
+
         // Add body data
         request.httpBody = model.requestData
-        
+
         // Perform request
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             DispatchQueue.main.async {
@@ -445,55 +486,55 @@ extension NetworkViewControllerDetail {
             }
         }.resume()
     }
-    
+
     private func handleReplayResponse(data: Data?, response: URLResponse?, error: Error?) {
         var title = "Request Replayed"
         var message = ""
-        
-        if let error = error {
+
+        if let error {
             title = "Replay Failed"
             message = "Error: \(error.localizedDescription)"
         } else if let httpResponse = response as? HTTPURLResponse {
             let statusCode = httpResponse.statusCode
             let responseSize = data?.count ?? 0
-            
+
             message = """
             Status Code: \(statusCode)
             Response Size: \(formatBytes(responseSize))
             """
-            
-            if statusCode >= 200 && statusCode < 300 {
+
+            if statusCode >= 200, statusCode < 300 {
                 title = "Replay Successful ✅"
             } else if statusCode >= 400 {
                 title = "Replay Completed ⚠️"
             }
         }
-        
+
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        
+
         // Add response viewing option if we have data
-        if let data = data, !data.isEmpty {
+        if let data, !data.isEmpty {
             alert.addAction(UIAlertAction(title: "View Response", style: .default) { [weak self] _ in
                 self?.showReplayResponseDetail(data: data, response: response)
             })
         }
-        
+
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
-    
+
     private func showReplayResponseDetail(data: Data, response: URLResponse?) {
         let detailVC = ReplayResponseViewController(data: data, response: response)
         let navController = UINavigationController(rootViewController: detailVC)
         present(navController, animated: true)
     }
-    
+
     private func showErrorAlert(_ message: String) {
         let alert = UIAlertController(title: "Error", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
-    
+
     private func formatBytes(_ bytes: Int) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .binary
@@ -503,7 +544,7 @@ extension NetworkViewControllerDetail {
     private func formatLog(
         model: HttpModel
     ) -> String {
-        return """
+        """
         [\(model.method ?? "")] \(model.startTime ?? "") (\(model.statusCode ?? ""))
 
         ------- URL -------
@@ -538,7 +579,7 @@ extension NetworkViewControllerDetail {
 final class ReplayResponseViewController: BaseController {
     private let data: Data
     private let response: URLResponse?
-    
+
     private let textView: UITextView = {
         let textView = UITextView()
         textView.translatesAutoresizingMaskIntoConstraints = false
@@ -548,37 +589,37 @@ final class ReplayResponseViewController: BaseController {
         textView.isEditable = false
         return textView
     }()
-    
+
     init(data: Data, response: URLResponse?) {
         self.data = data
         self.response = response
         super.init()
     }
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
         displayResponse()
     }
-    
+
     private func setupUI() {
         title = "Replay Response"
         view.backgroundColor = .black
-        
+
         navigationItem.leftBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .done,
             target: self,
             action: #selector(closeTapped)
         )
-        
+
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .action,
             target: self,
             action: #selector(shareTapped)
         )
-        
+
         view.addSubview(textView)
-        
+
         NSLayoutConstraint.activate([
             textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             textView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -586,10 +627,10 @@ final class ReplayResponseViewController: BaseController {
             textView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
-    
+
     private func displayResponse() {
         var responseText = ""
-        
+
         // Headers
         if let httpResponse = response as? HTTPURLResponse {
             responseText += "HTTP/1.1 \(httpResponse.statusCode)\n"
@@ -599,19 +640,19 @@ final class ReplayResponseViewController: BaseController {
             }
             responseText += "\n"
         }
-        
+
         // Body
         responseText += "Response Body:\n"
         responseText += "═══════════════════════════════════════\n"
-        
+
         let formattedString = data.formattedString()
         textView.text = responseText + formattedString
     }
-    
+
     @objc private func closeTapped() {
         dismiss(animated: true)
     }
-    
+
     @objc private func shareTapped() {
         let text = textView.text ?? ""
         let activityVC = UIActivityViewController(activityItems: [text], applicationActivities: nil)
