@@ -15,9 +15,13 @@ struct WindowManagerTests {
     @MainActor
     func presentDebuggerWhenNotShowing() async {
         // Given
+        let hostWindow = makeHostWindow()
         let mockViewController = UIViewController()
         FloatViewManager.isShowingDebuggerView = false
-        defer { WindowManager.removeDebugger() }
+        defer {
+            WindowManager.removeDebugger()
+            hostWindow.isHidden = true
+        }
 
         FloatViewManager.setup(mockViewController)
 
@@ -28,6 +32,12 @@ struct WindowManagerTests {
         #expect(FloatViewManager.isShowingDebuggerView == true)
         #expect(WindowManager.rootNavigation?.topViewController == mockViewController)
         #expect(WindowManager.window.isKeyWindow)
+        #expect(WindowManager.window.windowLevel == hostWindow.windowLevel)
+
+        WindowManager.removeDebugger()
+
+        #expect(hostWindow.isKeyWindow)
+        #expect(WindowManager.window.windowLevel == .alert + 1)
     }
 
     @Test("Present debugger when already showing")
@@ -55,6 +65,7 @@ struct WindowManagerTests {
 
         // Then
         #expect(FloatViewManager.isShowingDebuggerView == false)
+        #expect(WindowManager.window.windowLevel == .alert + 1)
     }
 
     @Test("Present view debugger when showing")
@@ -82,5 +93,19 @@ struct WindowManagerTests {
 
         // Then
         #expect(FloatViewManager.isShowingDebuggerView == false)
+    }
+
+    @MainActor
+    private func makeHostWindow() -> UIWindow {
+        let hostWindow: UIWindow
+        if let scene = WindowManager.window.windowScene {
+            hostWindow = UIWindow(windowScene: scene)
+        } else {
+            hostWindow = UIWindow(frame: UIScreen.main.bounds)
+        }
+        hostWindow.windowLevel = .normal
+        hostWindow.rootViewController = UIViewController()
+        hostWindow.makeKeyAndVisible()
+        return hostWindow
     }
 }

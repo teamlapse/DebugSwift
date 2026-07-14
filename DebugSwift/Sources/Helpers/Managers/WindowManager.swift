@@ -12,6 +12,7 @@ import UIKit
 enum WindowManager {
     nonisolated(unsafe) static var isSelectingWindow = false
 
+    private static let floatingWindowLevel = UIWindow.Level.alert + 1
     private weak static var previousKeyWindow: UIWindow?
 
     static var rootNavigation: UINavigationController? {
@@ -25,7 +26,7 @@ enum WindowManager {
         } else {
             window = CustomWindow(frame: UIScreen.main.bounds)
         }
-        window.windowLevel = .alert + 1
+        window.windowLevel = floatingWindowLevel
 
         let navigation = UINavigationController(rootViewController: UIViewController())
         navigation.interactivePopGestureRecognizer?.isEnabled = false
@@ -137,13 +138,15 @@ enum WindowManager {
         }
 
         previousKeyWindow?.endEditing(true)
+        window.windowLevel = previousKeyWindow?.windowLevel ?? .normal
         window.makeKeyAndVisible()
     }
 
     private static func restorePreviousKeyWindow() {
         let fallbackWindow = window.windowScene?.windows.first {
-            $0 !== window && !$0.isHidden && $0.windowLevel < window.windowLevel
+            $0 !== window && !$0.isHidden && $0.windowLevel <= window.windowLevel
         }
+        window.windowLevel = floatingWindowLevel
         (previousKeyWindow ?? fallbackWindow)?.makeKey()
         previousKeyWindow = nil
     }

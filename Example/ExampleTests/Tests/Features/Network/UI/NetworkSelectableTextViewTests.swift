@@ -2,11 +2,12 @@
 import Testing
 import UIKit
 
-struct NetworkSelectableTextViewTests {
-    @Test("Copy uses the exact selected range")
+struct NetworkTextSelectionTests {
+    @Test("Native copy uses the exact selected range")
     @MainActor
     func copySelectedRange() {
-        let textView = NetworkSelectableTextView()
+        let cell = NetworkTableViewCellDetail(style: .default, reuseIdentifier: nil)
+        let textView = cell.details
         textView.text = "Request response body"
         textView.selectedRange = NSRange(location: 8, length: 8)
 
@@ -15,16 +16,13 @@ struct NetworkSelectableTextViewTests {
         #expect(UIPasteboard.general.string == "response")
     }
 
-    @Test("Copy is unavailable without a selection")
+    @Test("HTTP details use native selectable text")
     @MainActor
-    func copyUnavailableWithoutSelection() {
-        let textView = NetworkSelectableTextView()
-        textView.text = "Response body"
-        textView.selectedRange = NSRange(location: 0, length: 0)
+    func nativeSelectableText() {
+        let cell = NetworkTableViewCellDetail(style: .default, reuseIdentifier: nil)
 
-        let canCopy = textView.canPerformAction(#selector(UIResponderStandardEditActions.copy(_:)), withSender: nil)
-
-        #expect(!canCopy)
+        #expect(cell.details.isSelectable)
+        #expect(!cell.details.isEditable)
     }
 
     @Test("Section copy uses the complete displayed value")

@@ -8,28 +8,9 @@
 
 import UIKit
 
-final class NetworkSelectableTextView: UITextView {
-    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
-        if action == #selector(copy(_:)) {
-            return selectedRange.length > 0
-        }
-
-        return super.canPerformAction(action, withSender: sender)
-    }
-
-    override func copy(_ sender: Any?) {
-        let value = text as NSString
-        guard selectedRange.length > 0, NSMaxRange(selectedRange) <= value.length else {
-            return
-        }
-
-        UIPasteboard.general.string = value.substring(with: selectedRange)
-    }
-}
-
 final class NetworkTableViewCellDetail: UITableViewCell {
     let details: UITextView = {
-        let textView = NetworkSelectableTextView()
+        let textView = UITextView()
         textView.font = UIFont.systemFont(
             ofSize: 12,
             weight: .medium
