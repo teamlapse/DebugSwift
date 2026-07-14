@@ -12,6 +12,8 @@ import UIKit
 enum WindowManager {
     nonisolated(unsafe) static var isSelectingWindow = false
 
+    private weak static var previousKeyWindow: UIWindow?
+
     static var rootNavigation: UINavigationController? {
         window.rootViewController as? UINavigationController
     }
@@ -39,8 +41,7 @@ enum WindowManager {
         if let viewController = FloatViewManager.shared.floatViewController {
             // Prevent clicks
             window.isUserInteractionEnabled = false
-            // Remove keyboard, if opened.
-            UIWindow.keyWindow?.endEditing(true)
+            activateWindow()
 
             rootNavigation?.pushViewController(
                 viewController,
@@ -51,9 +52,15 @@ enum WindowManager {
     }
 
     static func removeDebugger() {
+        guard FloatViewManager.isShowingDebuggerView else {
+            restorePreviousKeyWindow()
+            return
+        }
+
         FloatViewManager.isShowingDebuggerView = false
         removeNavigationBar()
         rootNavigation?.popViewController(animated: true)
+        restorePreviousKeyWindow()
     }
 
     static func showNavigationBar() {
@@ -67,6 +74,7 @@ enum WindowManager {
     static func presentViewDebugger() {
         guard !FloatViewManager.isShowingDebuggerView else { return }
         FloatViewManager.isShowingDebuggerView = true
+        activateWindow()
 
         let alertController = UIAlertController(
             title: "Select a Window",
@@ -120,6 +128,24 @@ enum WindowManager {
     static func removeViewDebugger() {
         FloatViewManager.isShowingDebuggerView = false
         rootNavigation?.dismiss(animated: true)
+        restorePreviousKeyWindow()
+    }
+
+    private static func activateWindow() {
+        if UIApplication.keyWindow !== window {
+            previousKeyWindow = UIApplication.keyWindow
+        }
+
+        previousKeyWindow?.endEditing(true)
+        window.makeKeyAndVisible()
+    }
+
+    private static func restorePreviousKeyWindow() {
+        let fallbackWindow = window.windowScene?.windows.first {
+            $0 !== window && !$0.isHidden && $0.windowLevel < window.windowLevel
+        }
+        (previousKeyWindow ?? fallbackWindow)?.makeKey()
+        previousKeyWindow = nil
     }
 }
 
