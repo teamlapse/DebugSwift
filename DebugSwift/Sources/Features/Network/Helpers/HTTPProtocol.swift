@@ -236,13 +236,14 @@ final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
         }
 
         model.requestId = request.requestId
-        model = ErrorHelper.handle(error, model: model)
-        let isSuccess = model.isSuccess
-        if HttpDatasource.shared.addHttpRequest(model) {
-            await MainActor.run {
+        let finalModel = ErrorHelper.handle(error, model: model)
+        // HttpDatasource has no internal locking; every access must stay on
+        // the main actor alongside the UI that reads it.
+        await MainActor.run {
+            if HttpDatasource.shared.addHttpRequest(finalModel) {
                 NotificationCenter.default.post(
                     name: NSNotification.Name("reloadHttp_DebugSwift"),
-                    object: isSuccess
+                    object: finalModel.isSuccess
                 )
             }
         }
