@@ -163,16 +163,15 @@ final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
             dataTask = nil
         }
 
-        Task { @MainActor in
+        Task { @Sendable in
             guard await NetworkHelper.shared.isNetworkEnable else {
                 return
             }
 
-            await self.processNetworkData()
+            await processNetworkData()
         }
     }
     
-    @MainActor
     private func processNetworkData() async {
         var model = HttpModel()
         model.url = request.url
@@ -238,11 +237,14 @@ final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
 
         model.requestId = request.requestId
         model = ErrorHelper.handle(error, model: model)
+        let isSuccess = model.isSuccess
         if HttpDatasource.shared.addHttpRequest(model) {
-            NotificationCenter.default.post(
-                name: NSNotification.Name("reloadHttp_DebugSwift"),
-                object: model.isSuccess
-            )
+            await MainActor.run {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("reloadHttp_DebugSwift"),
+                    object: isSuccess
+                )
+            }
         }
     }
 }
