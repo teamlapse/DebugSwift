@@ -163,12 +163,12 @@ final class CustomHTTPProtocol: URLProtocol, @unchecked Sendable {
             dataTask = nil
         }
 
-        Task { @Sendable in
+        Task { @MainActor in
             guard await NetworkHelper.shared.isNetworkEnable else {
                 return
             }
-            
-            await processNetworkData()
+
+            await self.processNetworkData()
         }
     }
     
