@@ -125,7 +125,7 @@ final class WebSocketMonitor: NSObject, @unchecked Sendable {
 
             // Wrap it so we can intercept the incoming message/error
             let wrapped: HandlerBlock = { messageObj, error in
-                if let self = self,
+                if let self = self, self.isEnabled,
                    let task = obj as? URLSessionWebSocketTask {
                     if let err = error {
                         Task { @MainActor in self.handleReceiveError(task: task, error: err) }
