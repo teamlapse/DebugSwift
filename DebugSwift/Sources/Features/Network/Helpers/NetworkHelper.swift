@@ -31,7 +31,10 @@ final class NetworkHelper: @unchecked Sendable {
 #endif
 
         CustomHTTPProtocol.start()
-        WebSocketMonitor.shared.enable()
+
+        if !DebugSwift.App.shared.disableMethods.contains(.webSocket) {
+            WebSocketMonitor.shared.enable()
+        }
 
         if !DebugSwift.App.shared.disableMethods.contains(.wkWebView) {
             WKWebViewNetworkMonitor.shared.install()
